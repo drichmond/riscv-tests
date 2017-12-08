@@ -125,8 +125,11 @@ _start:
   li a1, 1
 1:bgeu a0, a1, 1b
 
-  # give each core 128KB of stack + TLS
-#define STKSHIFT 17
+  # give each core 64KB of stack + TLS
+# STKSHIFT should be defined by the makefile
+#ifndef STKSHIFT
+#define STKSHIFT 15
+#endif
   sll a2, a0, STKSHIFT
   add tp, tp, a2
   add sp, a0, 1
@@ -235,3 +238,7 @@ tohost: .dword 0
 .align 6
 .globl fromhost
 fromhost: .dword 0
+.section ".iomem","w",@nobits
+.align 6
+.globl iomem
+iomem: .dword 0

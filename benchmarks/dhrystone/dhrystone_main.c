@@ -44,8 +44,8 @@ Enumeration     Func_1 ();
 
 Boolean		Done;
 
-long            Begin_Time,
-                End_Time,
+long            Begin_Cycle,
+                End_Cycle,
                 User_Time;
 long            Microseconds,
                 Dhrystones_Per_Second;
@@ -58,6 +58,7 @@ int main (int argc, char** argv)
   /* main program, corresponds to procedures        */
   /* Main and Proc_0 in the Ada version             */
 {
+  printf("Beginning Dhrystone program!\n");
         One_Fifty       Int_1_Loc;
   REG   One_Fifty       Int_2_Loc;
         One_Fifty       Int_3_Loc;
@@ -167,7 +168,7 @@ int main (int argc, char** argv)
     Stop_Timer();
     setStats(0);
 
-    User_Time = End_Time - Begin_Time;
+    User_Time = (End_Cycle - Begin_Cycle)/HZ;
 
     if (User_Time < Too_Small_Time)
     {
@@ -229,9 +230,12 @@ int main (int argc, char** argv)
   debug_printf("\n");
 
 
-  Microseconds = ((User_Time / Number_Of_Runs) * Mic_secs_Per_Second) / HZ;
+  Microseconds = ((User_Time * Mic_secs_Per_Second / HZ) / Number_Of_Runs);
   Dhrystones_Per_Second = (HZ * Number_Of_Runs) / User_Time;
-
+  printf("Total Cycles: %ld\n", End_Cycle - Begin_Cycle);
+  printf("User Time: %ld\n", User_Time);
+  printf("Number of Runs: %ld\n", Number_Of_Runs);
+  printf("HZ: %ld\n", HZ);
   printf("Microseconds for one run through Dhrystone: %ld\n", Microseconds);
   printf("Dhrystones per Second:                      %ld\n", Dhrystones_Per_Second);
 

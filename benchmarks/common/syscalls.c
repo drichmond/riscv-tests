@@ -15,8 +15,7 @@
 extern volatile uint64_t tohost;
 extern volatile uint64_t fromhost;
 
-static uintptr_t syscall(uintptr_t which, uint64_t arg0, uint64_t arg1, uint64_t arg2)
-{
+uintptr_t __attribute__((weak)) overlay_syscall(uintptr_t which, uint64_t arg0, uint64_t arg1, uint64_t arg2){
   volatile uint64_t magic_mem[8] __attribute__((aligned(64)));
   magic_mem[0] = which;
   magic_mem[1] = arg0;
@@ -30,8 +29,23 @@ static uintptr_t syscall(uintptr_t which, uint64_t arg0, uint64_t arg1, uint64_t
   fromhost = 0;
 
   __sync_synchronize();
-  return magic_mem[0];
+  return magic_mem[0]; 	
 }
+
+static uintptr_t syscall(uintptr_t which, uint64_t arg0, uint64_t arg1, uint64_t arg2)
+{
+  return overlay_syscall(which, arg0, arg1, arg2);
+}
+
+#ifndef READ_CSR
+#define READ_CSR(name) read_csr(name)
+#endif
+#ifndef CYCLE_CTR_IDX
+#define CYCLE_CTR_IDX mcycle
+#endif
+#ifndef INSTRET_CTR_IDX
+#define INSTRET_CTR_IDX minstret
+#endif
 
 #define NUM_COUNTERS 2
 static uintptr_t counters[NUM_COUNTERS];
@@ -42,13 +56,13 @@ void setStats(int enable)
   int i = 0;
 #define READ_CTR(name) do { \
     while (i >= NUM_COUNTERS) ; \
-    uintptr_t csr = read_csr(name); \
+    uintptr_t csr = READ_CSR(name); \
     if (!enable) { csr -= counters[i]; counter_names[i] = #name; } \
     counters[i++] = csr; \
   } while (0)
 
-  READ_CTR(mcycle);
-  READ_CTR(minstret);
+  READ_CTR(CYCLE_CTR_IDX);
+  READ_CTR(INSTRET_CTR_IDX);
 
 #undef READ_CTR
 }
@@ -119,7 +133,7 @@ void _init(int cid, int nc)
       pbuf += sprintf(pbuf, "%s = %d\n", counter_names[i], counters[i]);
   if (pbuf != buf)
     printstr(buf);
-
+  printstr("Finished\n\a");
   exit(ret);
 }
 

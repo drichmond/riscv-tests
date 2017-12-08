@@ -2,7 +2,7 @@
 
 #ifndef _DHRYSTONE_H
 #define _DHRYSTONE_H
-
+#include "encoding.h"
 /****************** "DHRYSTONE" Benchmark Program ***************************/
 #define Version "C, Version 2.2"
 /*  File:       dhry_1.c (part 2 of 3)
@@ -362,8 +362,8 @@
 #define HZ	(1) /* time() returns time in seconds */
 extern long     time(); /* see library function "time"  */
 #define Too_Small_Time 2 /* Measurements should last at least 2 seconds */
-#define Start_Timer() Begin_Time = time ( (long *) 0)
-#define Stop_Timer()  End_Time   = time ( (long *) 0)
+#define Start_Timer() Begin_Cycle = time ( (long *) 0)
+#define Stop_Timer()  End_Cycle   = time ( (long *) 0)
 
 #else
 
@@ -376,16 +376,33 @@ extern long     time(); /* see library function "time"  */
 #define CLOCK_TYPE "MSC clock()"
 extern clock_t	clock();
 #define Too_Small_Time (2*HZ)
-#define Start_Timer() Begin_Time = clock()
-#define Stop_Timer()  End_Time   = clock()
+#define Start_Timer() Begin_Cycle = clock()
+#define Stop_Timer()  End_Cycle   = clock()
 
 #elif defined(__riscv)
 
-#define HZ 1000000
+// HZ Should be defined by PYNQ.
+// CYCLE_CTR_IDX should be defined by PYNQ
+#ifndef HZ
+#define HZ 100000000
+#endif
+
+#ifndef READ_CSR
+#define READ_CSR(name) read_csr(name)
+#endif
+
+#ifndef CYCLE_CTR_IDX
+#define CYCLE_CTR_IDX mcycle
+#endif
+
+#ifndef INSTRET_CTR_IDX
+#define INSTRET_CTR_IDX minstret
+#endif
+
 #define Too_Small_Time 1
 #define CLOCK_TYPE "rdcycle()"
-#define Start_Timer() Begin_Time = read_csr(mcycle)
-#define Stop_Timer() End_Time = read_csr(mcycle)
+#define Start_Timer() Begin_Cycle = READ_CSR(CYCLE_CTR_IDX)
+#define Stop_Timer() End_Cycle = READ_CSR(CYCLE_CTR_IDX)
 
 #else
                 /* Use times(2) time function unless    */
@@ -405,8 +422,8 @@ struct tms      time_info;
                 /* see library function "times" */
 #define Too_Small_Time (2*HZ)
                 /* Measurements should last at least about 2 seconds */
-#define Start_Timer() times(&time_info); Begin_Time=(long)time_info.tms_utime
-#define Stop_Timer()  times(&time_info); End_Time = (long)time_info.tms_utime
+#define Start_Timer() times(&time_info); Begin_Cycle=(long)time_info.tms_utime
+#define Stop_Timer()  times(&time_info); End_Cycle = (long)time_info.tms_utime
 
 #endif /* MSC_CLOCK */
 #endif /* TIME */

@@ -7,6 +7,15 @@
 #include "util.h"
 
 #pragma GCC optimize ("unroll-loops")
+#ifndef READ_CSR
+#define READ_CSR(name) read_csr(name)
+#endif
+#ifndef CYCLE_CTR_IDX
+#define CYCLE_CTR_IDX mcycle
+#endif
+#ifndef INSTRET_CTR_IDX
+#define INSTRET_CTR_IDX minstret
+#endif
 
 void thread_entry(int cid, int nc)
 {
@@ -33,11 +42,11 @@ void thread_entry(int cid, int nc)
   size_t instret, cycles;
   for (int i = 0; i < R; i++)
   {
-    instret = -read_csr(minstret);
-    cycles = -read_csr(mcycle);
+    instret = -READ_CSR(INSTRET_CTR_IDX);
+    cycles = -READ_CSR(CYCLE_CTR_IDX);
     mm(m, n, p, a, p, b, n, c, n);
-    instret += read_csr(minstret);
-    cycles += read_csr(mcycle);
+    instret += READ_CSR(INSTRET_CTR_IDX);
+    cycles += READ_CSR(CYCLE_CTR_IDX);
   }
 
   asm volatile("fence");
