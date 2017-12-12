@@ -15,6 +15,14 @@
 extern volatile uint64_t tohost;
 extern volatile uint64_t fromhost;
 
+void flush(void) {
+  volatile int * foo = (int*) MEM_SIZE;
+  while(foo){
+    *foo;
+    foo --;
+  }
+}
+
 uintptr_t __attribute__((weak)) overlay_syscall(uintptr_t which, uint64_t arg0, uint64_t arg1, uint64_t arg2){
   volatile uint64_t magic_mem[8] __attribute__((aligned(64)));
   magic_mem[0] = which;
@@ -73,14 +81,16 @@ void __attribute__((noreturn)) tohost_exit(uintptr_t code)
   while (1);
 }
 
-uintptr_t __attribute__((weak)) handle_trap(uintptr_t cause, uintptr_t epc, uintptr_t regs[32])
-{
-  tohost_exit(1337);
-}
 
 void exit(int code)
 {
   tohost_exit(code);
+}
+
+uintptr_t __attribute__((weak)) handle_trap(uintptr_t cause, uintptr_t epc, uintptr_t regs[32])
+{
+  printf("Trap caused: PC: %x Cause: %lu \n", epc, cause);
+  exit(1);
 }
 
 void abort()
@@ -120,9 +130,9 @@ static void init_tls()
 
 void _init(int cid, int nc)
 {
+	
   init_tls();
   thread_entry(cid, nc);
-
   // only single-threaded programs should ever get here.
   int ret = main(0, 0);
 
@@ -133,23 +143,33 @@ void _init(int cid, int nc)
       pbuf += sprintf(pbuf, "%s = %d\n", counter_names[i], counters[i]);
   if (pbuf != buf)
     printstr(buf);
-  printstr("Finished\n\a");
+  printstr("Finished\a\n");
   exit(ret);
 }
 
+#define PUTCHAR_BUF_SIZE 64
 #undef putchar
 int putchar(int ch)
 {
-  static __thread char buf[64] __attribute__((aligned(64)));
+  static __thread uint32_t uibuf[PUTCHAR_BUF_SIZE/sizeof(uint32_t)]
+	  __attribute__((aligned(64)));
   static __thread int buflen = 0;
+  static __thread uint32_t temp = 0;
+  char shift = buflen & 3;
 
-  buf[buflen++] = ch;
-
-  if (ch == '\n' || buflen == sizeof(buf))
-  {
-    syscall(SYS_write, 1, (uintptr_t)buf, buflen);
-    buflen = 0;
+  if(shift == 0){
+    temp = 0;
   }
+
+  temp |= ((ch & 0xff) << (8 * shift));
+  uibuf[buflen >> 2] = temp;
+  buflen ++;
+
+  if (ch == '\n' || buflen == PUTCHAR_BUF_SIZE)
+  {
+    syscall(SYS_write, 1, (uintptr_t)uibuf, buflen);
+    buflen = 0;
+  } 
 
   return 0;
 }
